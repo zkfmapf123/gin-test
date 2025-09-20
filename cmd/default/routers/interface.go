@@ -6,8 +6,9 @@ import (
 )
 
 type RouterParams struct {
-	Prefix string
-	r      *gin.Engine
-	logger *zap.Logger
-	job    chan func()
+	Prefix        string
+	r             *gin.Engine
+	logger        *zap.Logger
+	serverTimeout int
+	job           chan func()
 }

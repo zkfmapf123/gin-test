@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -10,7 +9,6 @@ import (
 
 func TimerMiddleware(logger zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		fmt.Println(c.Request.URL.Path)
 		start := time.Now()
 
 		c.Next()

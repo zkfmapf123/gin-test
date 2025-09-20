@@ -23,6 +23,8 @@ var (
 	SERVER_WRITE_TIMEOUT = 10 * time.Second
 	SERVER_IDLE_TIMEOUT  = 60 * time.Second
 
+	SERVER_API_TIMEOUT = 10 * time.Second
+
 	SERVER_GRACE_SHUTDOWN_TIMEOUT = 30 * time.Second
 	JOB_COUNT                     = 100
 )
@@ -80,7 +82,7 @@ func getRouter(logger zap.Logger) *gin.Engine {
 	r.Use(middlewares.TimerMiddleware(logger))
 
 	// Router Group
-	routers.DefaultRouter(r, "/health", logger)
+	routers.DefaultRouter(r, "/health", SERVER_API_TIMEOUT, logger)
 
 	return r
 }
