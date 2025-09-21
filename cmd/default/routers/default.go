@@ -11,16 +11,18 @@ import (
 
 func DefaultRouter(r *gin.Engine, prefix string, serverTimeout time.Duration, logger zap.Logger, job chan<- func()) {
 
-	group := r.Group(prefix)
+	group := r.Group(prefix,
+		middlewares.TimeoutMiddleware(serverTimeout))
 
 	// handlers
-	healthCheckHandlers := handlers.NewHealthCheckHandlers(logger, job)
+	h := handlers.NewHealthCheckHandlers(logger, job)
 
-	group.GET("", middlewares.TimeoutMiddleware(serverTimeout), healthCheckHandlers.HealthCheck)
-	group.GET("/readness", middlewares.TimeoutMiddleware(serverTimeout), healthCheckHandlers.Readiness)
-	group.GET("/liveness", middlewares.TimeoutMiddleware(serverTimeout), healthCheckHandlers.Liveness)
+	group.GET("", h.HealthCheck)
+	group.GET("/readness", h.Readiness)
+	group.GET("/liveness", h.Liveness)
 
 	// test
-	group.GET("/timeout-test", middlewares.TimeoutMiddleware(serverTimeout), healthCheckHandlers.TimeoutTest)
-	group.GET("/worker-test", middlewares.TimeoutMiddleware(serverTimeout), healthCheckHandlers.TestWorker)
+	group.GET("/timeout-test", h.TimeoutTest)
+	group.GET("/worker-test", h.TestWorker)
+	group.POST("/validate", h.TestValidate)
 }
