@@ -13,18 +13,22 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	"github.com/zkfmapf123/dispatcher/cmd/default/routers"
+	"github.com/zkfmapf123/dispatcher/internal/concurrency"
 	"github.com/zkfmapf123/dispatcher/internal/secrets"
 	"github.com/zkfmapf123/dispatcher/middlewares"
 	"go.uber.org/zap"
 )
 
 var (
+	// Application
 	SERVER_READ_TIMEOUT  = 10 * time.Second
 	SERVER_WRITE_TIMEOUT = 10 * time.Second
 	SERVER_IDLE_TIMEOUT  = 60 * time.Second
 
+	// Server
 	SERVER_API_TIMEOUT = 10 * time.Second
 
+	// Gracefully Shutdown
 	SERVER_GRACE_SHUTDOWN_TIMEOUT = 30 * time.Second
 	JOB_COUNT                     = 100
 )
@@ -48,10 +52,14 @@ func main() {
 	logger := secrets.NewLogger()
 	defer logger.Sync()
 
+	job := make(chan func(), JOB_COUNT)
+	go concurrency.Dispatcher(logger, job)
+
 	// router
-	router := getRouter(logger)
+	router := getRouter(logger, job)
 	server := serverSetting(router)
-	router.Run()
+
+	router.Run(fmt.Sprintf(":%s", os.Getenv("PORT")))
 
 	// shutdown
 	go func() {
@@ -69,6 +77,8 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), SERVER_GRACE_SHUTDOWN_TIMEOUT)
 	defer cancel()
 
+	close(job)
+
 	if err := server.Shutdown(ctx); err != nil {
 		logger.Error("server shutdown error", zap.Error(err))
 	}
@@ -76,13 +86,13 @@ func main() {
 	logger.Info("server gracefully stopped")
 }
 
-func getRouter(logger zap.Logger) *gin.Engine {
+func getRouter(logger zap.Logger, job chan<- func()) *gin.Engine {
 	r := gin.Default()
 
 	r.Use(middlewares.TimerMiddleware(logger))
 
 	// Router Group
-	routers.DefaultRouter(r, "/health", SERVER_API_TIMEOUT, logger)
+	routers.DefaultRouter(r, "/health", SERVER_API_TIMEOUT, logger, job)
 
 	return r
 }

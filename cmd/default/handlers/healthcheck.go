@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -10,11 +11,13 @@ import (
 
 type HealthcheckHandlers struct {
 	logger zap.Logger
+	job    chan<- func()
 }
 
-func NewHealthCheckHandlers(logger zap.Logger) *HealthcheckHandlers {
+func NewHealthCheckHandlers(logger zap.Logger, job chan<- func()) *HealthcheckHandlers {
 	return &HealthcheckHandlers{
 		logger: logger,
+		job:    job,
 	}
 }
 
@@ -43,5 +46,16 @@ func (h *HealthcheckHandlers) TimeoutTest(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "OK",
+	})
+}
+
+func (h *HealthcheckHandlers) TestWorker(c *gin.Context) {
+
+	h.job <- func() {
+		fmt.Println("hello world")
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "test worker",
 	})
 }
